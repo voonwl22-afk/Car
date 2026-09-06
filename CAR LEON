@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>待办 · 团队共享清单</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/2.44.0/iconfont/tabler-icons.min.css">
+<style>
+  :root{
+    --bg: #EEF0E9;
+    --paper: #FFFFFF;
+    --ink: #23322A;
+    --ink-soft: #5D6A61;
+    --ink-faint: #93A096;
+    --line: #DEE2D7;
+    --teal: #3F6B5E;
+    --teal-soft: #E4EDE9;
+    --marigold: #C97F2A;
+    --marigold-soft: #F7E9D6;
+    --brick: #B24F3B;
+    --brick-soft: #F5E1DB;
+    --shadow: 0 1px 2px rgba(35,50,42,0.06), 0 6px 20px rgba(35,50,42,0.07);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background: var(--bg);
+    font-family: 'Inter', sans-serif;
+    color: var(--ink);
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #app{
+    width:100%;
+    max-width:430px;
+    min-height:100vh;
+    background: var(--bg);
+    position:relative;
+    padding-bottom:110px;
+  }
+
+  header{ padding: 24px 22px 14px; }
+  .top-row{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:10px;
+  }
+  .eyebrow{
+    font-size:13px;
+    color: var(--ink-soft);
+    margin:0 0 2px;
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .sync-dot{
+    width:7px; height:7px; border-radius:50%;
+    background: var(--teal);
+    display:inline-block;
+  }
+  .sync-dot.stale{ background: var(--marigold); }
+  h1{
+    font-family:'Source Serif 4', serif;
+    font-weight:600;
+    font-size:28px;
+    margin:0 0 16px;
+    line-height:1.15;
+  }
+  .sync-btn{
+    background: var(--paper);
+    border:1px solid var(--line);
+    border-radius:12px;
+    width:38px; height:38px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color: var(--ink-soft);
+    cursor:pointer;
+    flex:0 0 auto;
+  }
+  .sync-btn.spinning i{ animation: spin 0.7s linear infinite; }
+  @keyframes spin{ to{ transform: rotate(360deg); } }
+
+  .stats-row{ display:flex; gap:10px; }
+  .stat{
+    flex:1;
+    background: var(--paper);
+    border-radius:14px;
+    padding:12px 14px;
+    box-shadow: var(--shadow);
+  }
+  .stat .num{ font-size:20px; font-weight:600; line-height:1.1; }
+  .stat .label{ font-size:12px; color: var(--ink-soft); margin-top:2px; }
+  .stat.due .num{ color: var(--brick); }
+
+  .chip-row{
+    display:flex;
+    gap:8px;
+    overflow-x:auto;
+    padding: 4px 22px 16px;
+    scrollbar-width:none;
+  }
+  .chip-row::-webkit-scrollbar{display:none;}
+  .chip{
+    flex:0 0 auto;
+    padding:8px 14px;
+    border-radius:999px;
+    font-size:13px;
+    font-weight:500;
+    background: var(--paper);
+    color: var(--ink-soft);
+    border:1px solid var(--line);
+    display:flex;
+    align-items:center;
+    gap:6px;
+    cursor:pointer;
+    user-select:none;
+    white-space:nowrap;
+  }
+  .chip.active{ background: var(--ink); color: #fff; border-color: var(--ink); }
+  .chip .dot{ width:7px; height:7px; border-radius:50%; display:inline-block; }
+
+  main{ padding: 0 22px; }
+  .section{ margin-bottom: 22px; }
+  .section-title{
+    font-size:13px;
+    font-weight:600;
+    color: var(--ink-soft);
+    margin: 0 0 10px 4px;
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .section-title .count{
+    background: var(--line);
+    color: var(--ink-soft);
+    font-size:11px;
+    padding:1px 7px;
+    border-radius:999px;
+    font-weight:600;
+  }
+
+  .task{
+    background: var(--paper);
+    border-radius:14px;
+    padding:13px 14px;
+    display:flex;
+    align-items:flex-start;
+    gap:12px;
+    margin-bottom:9px;
+    box-shadow: var(--shadow);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+  }
+  .task.removing{ opacity:0; transform: translateX(30px) scale(0.97); }
+  .check{
+    width:22px; height:22px;
+    border-radius:50%;
+    border:2px solid var(--line);
+    flex:0 0 22px;
+    margin-top:1px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  .check.done{ background: var(--teal); border-color: var(--teal); color:#fff; }
+  .check i{ font-size:14px; }
+  .task-body{ flex:1; min-width:0; }
+  .task-text{ font-size:15px; font-weight:500; line-height:1.4; word-break:break-word; }
+  .task.is-done .task-text{ color: var(--ink-faint); text-decoration: line-through; }
+  .task-meta{ display:flex; align-items:center; gap:8px; margin-top:6px; flex-wrap:wrap; }
+  .tag{ font-size:11px; font-weight:600; padding:3px 9px; border-radius:999px; }
+  .author{ font-size:11px; color: var(--ink-faint); }
+  .due-badge{
+    font-size:11px; font-weight:600; display:flex; align-items:center; gap:4px;
+    padding:3px 9px; border-radius:999px; background: var(--line); color: var(--ink-soft);
+  }
+  .due-badge.today{ background: var(--marigold-soft); color: var(--marigold); }
+  .due-badge.overdue{ background: var(--brick-soft); color: var(--brick); }
+  .due-badge i{ font-size:12px; }
+  .del-btn{ background:none; border:none; color: var(--ink-faint); font-size:18px; padding:2px 2px; cursor:pointer; flex:0 0 auto; }
+  .del-btn:hover{ color: var(--brick); }
+
+  .empty{ text-align:center; padding: 60px 20px; color: var(--ink-soft); }
+  .empty i{ font-size:34px; color: var(--ink-faint); margin-bottom:10px; display:block; }
+  .empty p{ margin:4px 0; font-size:14px; }
+
+  .fab-wrap{
+    position:fixed; bottom:0; left:0; right:0;
+    display:flex; justify-content:center;
+    max-width:430px; margin:0 auto;
+    pointer-events:none;
+  }
+  .fab{
+    position:relative; left:auto; bottom:28px; transform:none; pointer-events:auto;
+    width:58px; height:58px; border-radius:50%;
+    background: var(--teal); color:#fff; border:none;
+    box-shadow: 0 10px 24px rgba(63,107,94,0.38);
+    font-size:26px; display:flex; align-items:center; justify-content:center; cursor:pointer;
+  }
+
+  .overlay{
+    position:fixed; inset:0; background: rgba(35,50,42,0.32);
+    display:none; align-items:flex-end; justify-content:center; z-index:30;
+  }
+  .overlay.open{ display:flex; }
+  .sheet{
+    background: var(--bg); width:100%; max-width:430px;
+    border-radius:22px 22px 0 0;
+    padding: 20px 22px calc(24px + env(safe-area-inset-bottom));
+    box-shadow: 0 -8px 30px rgba(0,0,0,0.15);
+    max-height:88vh; overflow-y:auto;
+  }
+  .sheet-handle{ width:38px; height:4px; background: var(--line); border-radius:999px; margin: 0 auto 14px; }
+  .sheet h2{ font-family:'Source Serif 4', serif; font-size:20px; font-weight:600; margin: 0 0 4px; }
+  .sheet .sub{ font-size:12px; color: var(--ink-soft); margin: 0 0 16px; }
+  .field{ margin-bottom:16px; }
+  .field label{ display:block; font-size:12px; font-weight:600; color: var(--ink-soft); margin-bottom:6px; }
+  .field input[type="text"], .field input[type="date"]{
+    width:100%; padding:12px 13px; border-radius:12px; border:1px solid var(--line);
+    background: var(--paper); font-size:15px; font-family:'Inter', sans-serif; color: var(--ink);
+  }
+  .field input:focus{ outline:none; border-color: var(--teal); }
+  .cat-row{ display:flex; flex-wrap:wrap; gap:8px; }
+  .cat-chip{
+    padding:8px 13px; border-radius:999px; font-size:13px; font-weight:600;
+    border:1.5px solid transparent; cursor:pointer; display:flex; align-items:center; gap:6px;
+  }
+  .cat-chip.selected{ border-color: currentColor; }
+  .cat-new{ display:flex; gap:8px; margin-top:10px; }
+  .cat-new input{ flex:1; padding:9px 12px; border-radius:10px; border:1px solid var(--line); font-size:13px; font-family:'Inter', sans-serif; }
+  .cat-new button{ padding:9px 14px; border-radius:10px; border:1px solid var(--line); background: var(--paper); font-size:13px; font-weight:600; color: var(--ink); cursor:pointer; }
+  .sheet-actions{ display:flex; gap:10px; margin-top:6px; }
+  .btn{ flex:1; padding:14px; border-radius:14px; border:none; font-size:15px; font-weight:600; font-family:'Inter', sans-serif; cursor:pointer; }
+  .btn.primary{ background: var(--teal); color:#fff; }
+  .btn.ghost{ background: var(--paper); color: var(--ink); border:1px solid var(--line); }
+  .error-text{ font-size:12px; color: var(--brick); margin-top:6px; display:none; }
+  .error-text.show{ display:block; }
+
+  .name-gate{
+    position:fixed; inset:0; background: var(--bg);
+    display:flex; align-items:center; justify-content:center;
+    z-index:50; padding:24px;
+  }
+  .name-card{
+    background: var(--paper); border-radius:18px; padding:26px 22px;
+    max-width:340px; width:100%; box-shadow: var(--shadow);
+  }
+  .name-card h2{ font-family:'Source Serif 4', serif; font-size:20px; margin:0 0 6px; }
+  .name-card p{ font-size:13px; color: var(--ink-soft); margin:0 0 16px; line-height:1.5; }
+  .load-note{ text-align:center; padding:60px 20px; color: var(--ink-soft); font-size:14px; }
+</style>
+</head>
+<body>
+
+<div class="name-gate" id="nameGate">
+  <div class="name-card">
+    <h2>加入共享清单</h2>
+    <p>这份待办清单由团队共用，所有人添加或修改的事项都会同步给大家。请输入你的名字，方便大家知道是谁加的。</p>
+    <div class="field">
+      <label for="nameInput">你的名字</label>
+      <input type="text" id="nameInput" placeholder="例如：小李">
+    </div>
+    <button class="btn primary" id="enterBtn" style="width:100%;">进入清单</button>
+  </div>
+</div>
+
+<div id="app" style="display:none;">
+  <header>
+    <div class="top-row">
+      <div>
+        <p class="eyebrow"><span class="sync-dot" id="syncDot"></span><span id="dateLine"></span></p>
+        <h1>团队待办</h1>
+      </div>
+      <button class="sync-btn" id="syncBtn" aria-label="刷新同步"><i class="ti ti-refresh"></i></button>
+    </div>
+    <div class="stats-row">
+      <div class="stat">
+        <div class="num" id="statTotal">0</div>
+        <div class="label">待完成</div>
+      </div>
+      <div class="stat due">
+        <div class="num" id="statDue">0</div>
+        <div class="label">今天 / 已过期</div>
+      </div>
+      <div class="stat">
+        <div class="num" id="statDone">0</div>
+        <div class="label">已完成</div>
+      </div>
+    </div>
+  </header>
+
+  <div class="chip-row" id="filterRow"></div>
+
+  <main id="listArea">
+    <div class="load-note">正在加载共享清单…</div>
+  </main>
+</div>
+
+<div class="fab-wrap"><button class="fab" id="openAdd" aria-label="添加待办" style="display:none;"><i class="ti ti-plus"></i></button></div>
+
+<div class="overlay" id="overlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h2>新建待办</h2>
+    <p class="sub">保存后所有人都会看到这条待办</p>
+    <div class="field">
+      <label for="taskInput">事项内容</label>
+      <input type="text" id="taskInput" placeholder="例如：整理项目周报">
+      <div class="error-text" id="taskError">请输入事项内容</div>
+    </div>
+    <div class="field">
+      <label>分类 / 标签</label>
+      <div class="cat-row" id="catRow"></div>
+      <div class="cat-new">
+        <input type="text" id="newCatInput" placeholder="新建分类，如"健身"">
+        <button id="addCatBtn" type="button">添加</button>
+      </div>
+    </div>
+    <div class="field">
+      <label for="dueInput">截止日期（可选）</label>
+      <input type="date" id="dueInput">
+    </div>
+    <div class="sheet-actions">
+      <button class="btn ghost" id="cancelBtn" type="button">取消</button>
+      <button class="btn primary" id="saveBtn" type="button">保存待办</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const STORAGE_KEY = 'shared-todo-state-v1';
+  const POLL_MS = 6000;
+
+  const PALETTE = [
+    {name:'teal', border:'#3F6B5E', bg:'#E4EDE9', text:'#2C5348'},
+    {name:'marigold', border:'#C97F2A', bg:'#F7E9D6', text:'#9C6420'},
+    {name:'plum', border:'#7A5980', bg:'#EFE6F0', text:'#5F4665'},
+    {name:'slate', border:'#4C6C90', bg:'#E3EAF1', text:'#3A5470'},
+    {name:'olive', border:'#6B7A3F', bg:'#EBEFDD', text:'#535F30'},
+    {name:'rose', border:'#A6555B', bg:'#F3E1E2', text:'#8A4247'}
+  ];
+
+  const DEFAULT_STATE = {
+    categories: [
+      {id:'work', label:'工作', colorIdx:0},
+      {id:'life', label:'生活', colorIdx:1},
+      {id:'study', label:'学习', colorIdx:2}
+    ],
+    todos: []
+  };
+
+  let state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+  let myName = '';
+  let activeFilter = 'all';
+  let isSyncing = false;
+
+  function cryptoId(){ return 'id-' + Math.random().toString(36).slice(2,10); }
+  function todayISO(){ return new Date().toISOString().slice(0,10); }
+
+  function colorFor(idx){ return PALETTE[idx % PALETTE.length]; }
+  function catById(id){ return state.categories.find(c=>c.id===id); }
+
+  function dueStatus(due){
+    if(!due) return 'none';
+    const today = todayISO();
+    if(due < today) return 'overdue';
+    if(due === today) return 'today';
+    return 'upcoming';
+  }
+
+  function formatDue(due){
+    const status = dueStatus(due);
+    const d = new Date(due + 'T00:00:00');
+    const label = (d.getMonth()+1) + '月' + d.getDate() + '日';
+    if(status === 'today') return '今天到期';
+    if(status === 'overdue') return label + ' · 已过期';
+    return label + ' 到期';
+  }
+
+  // ---- Storage ----
+  async function loadState(){
+    try{
+      const result = await window.storage.get(STORAGE_KEY, true);
+      if(result && result.value){
+        state = JSON.parse(result.value);
+      } else {
+        state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+        await saveState();
+      }
+    }catch(err){
+      state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+      try{ await saveState(); }catch(e){}
+    }
+  }
+
+  async function saveState(){
+    try{
+      await window.storage.set(STORAGE_KEY, JSON.stringify(state), true);
+      return true;
+    }catch(err){
+      console.error('保存失败', err);
+      return false;
+    }
+  }
+
+  async function syncNow(showSpin){
+    if(isSyncing) return;
+    isSyncing = true;
+    const btn = document.getElementById('syncBtn');
+    const dot = document.getElementById('syncDot');
+    if(showSpin && btn) btn.classList.add('spinning');
+    try{
+      const result = await window.storage.get(STORAGE_KEY, true);
+      if(result && result.value){
+        state = JSON.parse(result.value);
+        renderAll();
+      }
+      if(dot) dot.classList.remove('stale');
+    }catch(err){
+      if(dot) dot.classList.add('stale');
+    }finally{
+      isSyncing = false;
+      if(btn) btn.classList.remove('spinning');
+    }
+  }
+
+  // ---- Rendering ----
+  function renderDateLine(){
+    const d = new Date();
+    const weekdays = ['周日','周一','周二','周三','周四','周五','周六'];
+    document.getElementById('dateLine').textContent =
+      (d.getMonth()+1) + '月' + d.getDate() + '日 ' + weekdays[d.getDay()] + ' · 共享清单';
+  }
+
+  function renderStats(){
+    const undone = state.todos.filter(t=>!t.done);
+    const due = undone.filter(t=> t.due && dueStatus(t.due)!=='upcoming');
+    const done = state.todos.filter(t=>t.done);
+    document.getElementById('statTotal').textContent = undone.length;
+    document.getElementById('statDue').textContent = due.length;
+    document.getElementById('statDone').textContent = done.length;
+  }
+
+  function renderFilters(){
+    const row = document.getElementById('filterRow');
+    row.innerHTML = '';
+    row.appendChild(makeChip('all', '全部', null, activeFilter==='all'));
+    state.categories.forEach(c=>{
+      row.appendChild(makeChip(c.id, c.label, colorFor(c.colorIdx), activeFilter===c.id));
+    });
+  }
+
+  function makeChip(id, label, color, active){
+    const chip = document.createElement('div');
+    chip.className = 'chip' + (active ? ' active' : '');
+    if(color){
+      const dot = document.createElement('span');
+      dot.className = 'dot';
+      dot.style.background = color.border;
+      chip.appendChild(dot);
+    }
+    const span = document.createElement('span');
+    span.textContent = label;
+    chip.appendChild(span);
+    chip.addEventListener('click', ()=>{ activeFilter = id; renderAll(); });
+    return chip;
+  }
+
+  function renderList(){
+    const area = document.getElementById('listArea');
+    area.innerHTML = '';
+
+    let visible = state.todos.filter(t => activeFilter==='all' || t.category===activeFilter);
+
+    if(visible.length === 0){
+      area.innerHTML = '<div class="empty"><i class="ti ti-notebook"></i><p>这里还没有待办事项。</p><p>点击下方的加号，添加第一件事。</p></div>';
+      return;
+    }
+
+    const undone = visible.filter(t=>!t.done);
+    const done = visible.filter(t=>t.done);
+
+    const overdue = undone.filter(t=>dueStatus(t.due)==='overdue');
+    const today = undone.filter(t=>dueStatus(t.due)==='today');
+    const upcoming = undone.filter(t=>dueStatus(t.due)==='upcoming');
+    const noDate = undone.filter(t=>dueStatus(t.due)==='none');
+
+    if(overdue.length) area.appendChild(section('已过期', overdue));
+    if(today.length) area.appendChild(section('今天', today));
+    if(upcoming.length) area.appendChild(section('即将到来', upcoming));
+    if(noDate.length) area.appendChild(section('待安排', noDate));
+    if(done.length) area.appendChild(section('已完成', done));
+  }
+
+  function section(title, items){
+    const wrap = document.createElement('div');
+    wrap.className = 'section';
+    const h = document.createElement('div');
+    h.className = 'section-title';
+    h.innerHTML = '<span>'+title+'</span><span class="count">'+items.length+'</span>';
+    wrap.appendChild(h);
+    items.forEach(t => wrap.appendChild(taskCard(t)));
+    return wrap;
+  }
+
+  function taskCard(t){
+    const cat = catById(t.category);
+    const card = document.createElement('div');
+    card.className = 'task' + (t.done ? ' is-done' : '');
+    card.dataset.id = t.id;
+
+    const check = document.createElement('div');
+    check.className = 'check' + (t.done ? ' done' : '');
+    check.innerHTML = t.done ? '<i class="ti ti-check"></i>' : '';
+    check.addEventListener('click', async ()=>{
+      t.done = !t.done;
+      renderAll();
+      await saveState();
+    });
+
+    const body = document.createElement('div');
+    body.className = 'task-body';
+
+    const text = document.createElement('div');
+    text.className = 'task-text';
+    text.textContent = t.text;
+    body.appendChild(text);
+
+    const meta = document.createElement('div');
+    meta.className = 'task-meta';
+
+    if(cat){
+      const color = colorFor(cat.colorIdx);
+      const tag = document.createElement('span');
+      tag.className = 'tag';
+      tag.textContent = cat.label;
+      tag.style.background = color.bg;
+      tag.style.color = color.text;
+      meta.appendChild(tag);
+    }
+
+    if(t.due){
+      const status = dueStatus(t.due);
+      const badge = document.createElement('span');
+      badge.className = 'due-badge' + (status==='today' ? ' today' : status==='overdue' ? ' overdue' : '');
+      badge.innerHTML = '<i class="ti ti-calendar-event"></i>' + formatDue(t.due);
+      meta.appendChild(badge);
+    }
+
+    if(t.author){
+      const author = document.createElement('span');
+      author.className = 'author';
+      author.textContent = '由 ' + t.author + ' 添加';
+      meta.appendChild(author);
+    }
+
+    body.appendChild(meta);
+
+    const del = document.createElement('button');
+    del.className = 'del-btn';
+    del.innerHTML = '<i class="ti ti-trash"></i>';
+    del.setAttribute('aria-label', '删除待办');
+    del.addEventListener('click', ()=>{
+      card.classList.add('removing');
+      setTimeout(async ()=>{
+        state.todos = state.todos.filter(x=>x.id !== t.id);
+        renderAll();
+        await saveState();
+      }, 200);
+    });
+
+    card.appendChild(check);
+    card.appendChild(body);
+    card.appendChild(del);
+    return card;
+  }
+
+  function renderAll(){
+    renderStats();
+    renderFilters();
+    renderList();
+  }
+
+  // ---- Add sheet ----
+  const overlay = document.getElementById('overlay');
+  const openAdd = document.getElementById('openAdd');
+  const cancelBtn = document.getElementById('cancelBtn');
+  const saveBtn = document.getElementById('saveBtn');
+  const taskInput = document.getElementById('taskInput');
+  const taskError = document.getElementById('taskError');
+  const dueInput = document.getElementById('dueInput');
+  const catRow = document.getElementById('catRow');
+  const newCatInput = document.getElementById('newCatInput');
+  const addCatBtn = document.getElementById('addCatBtn');
+  const syncBtn = document.getElementById('syncBtn');
+
+  let selectedCategory = null;
+
+  function renderCatRow(){
+    catRow.innerHTML = '';
+    state.categories.forEach(c=>{
+      const color = colorFor(c.colorIdx);
+      const chip = document.createElement('div');
+      chip.className = 'cat-chip' + (selectedCategory===c.id ? ' selected' : '');
+      chip.style.background = color.bg;
+      chip.style.color = color.text;
+      chip.textContent = c.label;
+      chip.addEventListener('click', ()=>{
+        selectedCategory = c.id;
+        renderCatRow();
+      });
+      catRow.appendChild(chip);
+    });
+  }
+
+  async function openSheet(){
+    await syncNow(false);
+    taskInput.value = '';
+    dueInput.value = '';
+    taskError.classList.remove('show');
+    selectedCategory = state.categories.length ? state.categories[0].id : null;
+    renderCatRow();
+    overlay.classList.add('open');
+    setTimeout(()=> taskInput.focus(), 80);
+  }
+  function closeSheet(){ overlay.classList.remove('open'); }
+
+  openAdd.addEventListener('click', openSheet);
+  cancelBtn.addEventListener('click', closeSheet);
+  overlay.addEventListener('click', (e)=>{ if(e.target === overlay) closeSheet(); });
+  syncBtn.addEventListener('click', ()=> syncNow(true));
+
+  addCatBtn.addEventListener('click', async ()=>{
+    const label = newCatInput.value.trim();
+    if(!label) return;
+    const exists = state.categories.find(c=>c.label === label);
+    if(exists){ selectedCategory = exists.id; renderCatRow(); newCatInput.value=''; return; }
+    const id = 'cat-' + Math.random().toString(36).slice(2,8);
+    state.categories.push({id, label, colorIdx: state.categories.length});
+    selectedCategory = id;
+    newCatInput.value = '';
+    renderCatRow();
+    await saveState();
+  });
+
+  saveBtn.addEventListener('click', async ()=>{
+    const text = taskInput.value.trim();
+    if(!text){
+      taskError.classList.add('show');
+      taskInput.focus();
+      return;
+    }
+    taskError.classList.remove('show');
+    state.todos.unshift({
+      id: cryptoId(),
+      text,
+      category: selectedCategory,
+      due: dueInput.value || null,
+      done:false,
+      author: myName
+    });
+    closeSheet();
+    renderAll();
+    await saveState();
+  });
+
+  taskInput.addEventListener('input', ()=>{
+    if(taskInput.value.trim()) taskError.classList.remove('show');
+  });
+
+  // ---- Name gate + boot ----
+  const nameGate = document.getElementById('nameGate');
+  const nameInput = document.getElementById('nameInput');
+  const enterBtn = document.getElementById('enterBtn');
+  const appEl = document.getElementById('app');
+
+  async function boot(){
+    renderDateLine();
+    await loadState();
+    appEl.style.display = 'block';
+    document.getElementById('openAdd').style.display = 'flex';
+    renderAll();
+    setInterval(()=> syncNow(false), POLL_MS);
+    document.addEventListener('visibilitychange', ()=>{
+      if(document.visibilityState === 'visible') syncNow(false);
+    });
+  }
+
+  enterBtn.addEventListener('click', ()=>{
+    const val = nameInput.value.trim();
+    myName = val || '匿名';
+    nameGate.style.display = 'none';
+    boot();
+  });
+  nameInput.addEventListener('keydown', (e)=>{
+    if(e.key === 'Enter') enterBtn.click();
+  });
+  setTimeout(()=> nameInput.focus(), 100);
+})();
+</script>
+</body>
+</html>
